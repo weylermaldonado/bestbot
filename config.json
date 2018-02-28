@@ -1,0 +1,6 @@
+{
+    "port" : ":8181",
+    "cert_pem": "./certificates/cert.pem",
+    "key_pem": "./certificates/key.pem",
+    "my_token": "not-a-token"
+}
