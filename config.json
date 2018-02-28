@@ -2,5 +2,7 @@
     "port" : ":8181",
     "cert_pem": "./certificates/cert.pem",
     "key_pem": "./certificates/key.pem",
-    "my_token": "not-a-token"
+    "my_token": "not-a-token",
+    "fb_token": "your token here",
+    "fb_api": "put the url here"
 }

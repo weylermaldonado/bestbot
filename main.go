@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,6 +14,8 @@ type Config struct {
 	CertPem string `json: "cert_pem"`
 	KeyPem  string `json: "key_pem"`
 	MyToken string `json: "my_token"`
+	FBToken string `json: "fb_token"`
+	FBURL   string `json: "fb_api"`
 }
 
 var config Config
@@ -60,6 +64,71 @@ func webhook(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Unknow token"))
 		return
 	}
+
+	if r.Method == http.MethodPost {
+		rm := RequestMessage{}
+		err := json.NewDecoder(r.Body).Decode(&rm)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		if rm.Object == "page" {
+			for _, entry := range rm.Entry {
+				for _, message := range entry.Messaging {
+					messageRecived(message)
+				}
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func messageRecived(messaging Messaging) {
+	if messaging.Text != "" {
+		sendTextMessage(messaging.Sender.ID, "Hola gracias por escribir")
+	}
+}
+
+func sendTextMessage(recipientID, text string) {
+	rm := ResponseMessage{
+		Recipient:      Recipient{recipientID},
+		MessageContent: MessageContent{text},
+	}
+
+	callSendAPI(rm)
+}
+
+func callSendAPI(message ResponseMessage) {
+	m, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("Trouble while parse %v", err)
+		return
+	}
+	fu := fmt.Sprintf("%s?access_token=%s", config.FBToken, config.FBURL)
+	req, err := http.NewRequest("POST", fu, bytes.NewBuffer(m))
+
+	if err != nil {
+		log.Printf("Trouble while send message %v\n", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error while post %v\n", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		log.Println("The response was succesfuly send")
+		return
+	}
+	log.Println("Error while send response, status:", resp.Status)
 }
 
 //Configuración de droplet
